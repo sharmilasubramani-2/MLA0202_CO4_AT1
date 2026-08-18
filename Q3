@@ -1,0 +1,41 @@
+import warnings
+warnings.filterwarnings('ignore')
+
+import numpy as np
+
+print("NAME: SHARMILA S")
+print("REGISTER NO: 192525011\n")
+
+original_image = np.array([
+    [10, 12, 100],
+    [15, 11, 105],
+    [80, 85, 90]
+])
+
+rows, cols = original_image.shape
+updated_image = np.zeros((rows, cols), dtype=int)
+
+for i in range(rows):
+    for j in range(cols):
+        neighbors = []
+        if i > 0:
+            neighbors.append(original_image[i - 1, j])
+        if i < rows - 1:
+            neighbors.append(original_image[i + 1, j])
+        if j > 0:
+            neighbors.append(original_image[i, j - 1])
+        if j < cols - 1:
+            neighbors.append(original_image[i, j + 1])
+        
+        updated_image[i, j] = int(np.mean(neighbors))
+
+print("Markov Random Field (MRF) Image Denoising Simulation")
+print("Grid Size: 3x3 Lattice (4-Connected Neighborhood System)\n")
+
+print("Original Noisy Image Lattice (Pixel Nodes):")
+for row in original_image:
+    print("  " + "  ".join(f"{val:4d}" for val in row))
+
+print("\nUpdated Image Lattice (After 1 Iteration of Local Field Smoothing):")
+for row in updated_image:
+    print("  " + "  ".join(f"{val:4d}" for val in row))
