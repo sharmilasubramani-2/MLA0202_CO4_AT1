@@ -1,0 +1,53 @@
+import warnings
+warnings.filterwarnings('ignore')
+
+import numpy as np
+
+print("NAME: SHARMILA S")
+print("REGISTER NO: 192525011\n")
+
+states = ['Hot', 'Cold']
+observations = ['Sunny', 'Cloudy', 'Rainy']
+
+start_prob = np.array([0.6, 0.4])
+trans_prob = np.array([
+    [0.7, 0.3],
+    [0.4, 0.6]
+])
+emit_prob = np.array([
+    [0.6, 0.3, 0.1],
+    [0.1, 0.4, 0.5]
+])
+
+obs_seq = ['Sunny', 'Cloudy', 'Rainy']
+obs_map = {'Sunny': 0, 'Cloudy': 1, 'Rainy': 2}
+obs_indices = [obs_map[o] for o in obs_seq]
+
+n_states = len(states)
+n_obs = len(obs_indices)
+viterbi = np.zeros((n_states, n_obs))
+backpointer = np.zeros((n_states, n_obs), dtype=int)
+
+for s in range(n_states):
+    viterbi[s, 0] = start_prob[s] * emit_prob[s, obs_indices[0]]
+
+for t in range(1, n_obs):
+    for s in range(n_states):
+        prob = viterbi[:, t-1] * trans_prob[:, s] * emit_prob[s, obs_indices[t]]
+        viterbi[s, t] = np.max(prob)
+        backpointer[s, t] = np.argmax(prob)
+
+best_path_indices = [np.argmax(viterbi[:, -1])]
+for t in range(n_obs - 1, 0, -1):
+    best_path_indices.insert(0, backpointer[best_path_indices[0], t])
+
+predicted_states = [states[idx] for idx in best_path_indices]
+
+print("Hidden Markov Model Parameters:")
+print("Hidden States        :", states)
+print("Observation Alphabet :", observations)
+print(f"Given Observations   : {obs_seq}\n")
+print("Predicted Hidden Weather State Sequence:")
+for day, (obs, state) in enumerate(zip(obs_seq, predicted_states), 1):
+    print(f"Day {day} -> Observation: {obs:<6} | Predicted Hidden State: {state}")
+print(f"\nFinal State Sequence: {' -> '.join(predicted_states)}")
