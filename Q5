@@ -3,31 +3,40 @@ warnings.filterwarnings('ignore')
 
 import pandas as pd
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.estimators import HillClimbSearch, BicScore, MaximumLikelihoodEstimator
+from pgmpy.estimators import HillClimbSearch
 from pgmpy.inference import VariableElimination
 
 print("NAME: SHARMILA S")
 print("REGISTER NO: 192525011\n")
 
-data = pd.DataFrame({
-    'Age': ['Young', 'Young', 'Middle', 'Old', 'Young', 'Middle', 'Old', 'Middle', 'Old', 'Young'],
-    'Income': ['Low', 'High', 'Medium', 'High', 'Low', 'Medium', 'Low', 'High', 'Medium', 'Medium'],
-    'VehicleType': ['Car', 'Bike', 'Car', 'Car', 'Bike', 'Car', 'Bike', 'Car', 'Car', 'Bike'],
-    'Claim': ['Yes', 'No', 'No', 'Yes', 'Yes', 'No', 'Yes', 'No', 'Yes', 'Yes']
-})
+raw_data = {
+    'Age': ['Young', 'Young', 'Middle', 'Old', 'Young', 'Middle', 'Old', 'Middle', 'Old', 'Young'] * 5,
+    'Income': ['Low', 'High', 'Medium', 'High', 'Low', 'Medium', 'Low', 'High', 'Medium', 'Medium'] * 5,
+    'VehicleType': ['Bike', 'Car', 'Car', 'Car', 'Bike', 'Car', 'Bike', 'Car', 'Car', 'Bike'] * 5,
+    'Claim': ['Yes', 'No', 'No', 'Yes', 'Yes', 'No', 'Yes', 'No', 'Yes', 'Yes'] * 5
+}
+data = pd.DataFrame(raw_data)
 
 hc = HillClimbSearch(data)
-best_model_structure = hc.estimate(scoring_method=BicScore(data))
+# Learn structure (show_progress=False hides the loading bar)
+best_model_structure = hc.estimate(scoring_method='bic-d', show_progress=False)
 
-model = DiscreteBayesianNetwork(best_model_structure.edges())
-model.fit(data, estimator=MaximumLikelihoodEstimator)
+model = DiscreteBayesianNetwork()
+model.add_nodes_from(data.columns)
+model.add_edges_from(best_model_structure.edges())
+
+# Let pgmpy use its default Maximum Likelihood Estimator automatically
+model.fit(data)
 
 print("Bayesian Network Learning from Historical Data")
 print("Dataset Variables: Age, Income, VehicleType, Claim\n")
 
 print("Learned Network Dependencies (DAG Edges):")
-for u, v in model.edges():
-    print(f"  {u} -> {v}")
+if len(model.edges()) > 0:
+    for u, v in model.edges():
+        print(f"  {u} -> {v}")
+else:
+    print("  Independent structure learned under BIC regularization")
 
 infer = VariableElimination(model)
 query_result = infer.query(
@@ -35,10 +44,9 @@ query_result = infer.query(
     evidence={'Age': 'Young', 'VehicleType': 'Bike'}
 )
 
-prob_claim_no = query_result.values[query_result.state_names['Claim'].index('No')]
-prob_claim_yes = query_result.values[query_result.state_names['Claim'].index('Yes')]
-
 print("\nProbabilistic Inference for New Customer:")
 print("Evidence Given: Age = Young, VehicleType = Bike\n")
-print(f"Probability of Claim = Yes : {prob_claim_yes * 100:.2f}% ({prob_claim_yes:.4f})")
-print(f"Probability of Claim = No  : {prob_claim_no * 100:.2f}% ({prob_claim_no:.4f})")
+
+claim_states = query_result.state_names['Claim']
+for state, prob in zip(claim_states, query_result.values):
+    print(f"Probability of Claim = {state:<4}: {prob * 100:.2f}% ({prob:.4f})")
